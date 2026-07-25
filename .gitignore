@@ -1,0 +1,24 @@
+# Secrets — clé de signature JWT générée localement
+backend/.secret_key
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+backend/.venv/
+backend/.pytest_cache/
+
+# Données locales — bases SQLite, PDF sources et DOCX générés.
+# Contiennent des données opérationnelles réelles (vols, noms de commandants) :
+# ne jamais versionner, a fortiori sur un dépôt public.
+data/
+backend/data/
+*.db
+*.db.bak-*
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# OS
+.DS_Store

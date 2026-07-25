@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #185FA5;
+  --color-primary-hover: #0C447C;
+  --color-primary-light: #E6F1FB;
+  --color-surface: #F8F8F7;
+  --color-text: #1a1a1a;
+  --color-muted: #6b6b6b;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: #1a1a1a;
+  background: #F8F8F7;
+}
+
+@keyframes overlayShow {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes contentShow {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.97); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes toastSlideIn {
+  from { transform: translateX(calc(100% + 24px)); }
+  to { transform: translateX(0); }
+}
+@keyframes toastSwipeOut {
+  from { transform: translateX(var(--radix-toast-swipe-end-x)); }
+  to { transform: translateX(calc(100% + 24px)); }
+}
+
+.dialog-overlay { animation: overlayShow 130ms ease; }
+.dialog-content { animation: contentShow 150ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+@keyframes drawerSlideIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+.drawer-panel { animation: drawerSlideIn 220ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+.alloc-preview {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 24px;
+  color: #1a1a1a;
+}
+.alloc-preview p {
+  margin: 0;
+  white-space: pre-wrap;
+  min-height: 1em;
+}
+.alloc-preview table {
+  border-collapse: collapse;
+  margin: 6px 0;
+  font-size: 10px;
+  max-width: 100%;
+}
+.alloc-preview th,
+.alloc-preview td {
+  border: 1px solid #555;
+  padding: 2px 6px;
+  text-align: left;
+  white-space: nowrap;
+}
+.alloc-preview th {
+  background: #d9d9d9;
+  font-weight: bold;
+}
+.toast-root[data-state="open"] { animation: toastSlideIn 200ms cubic-bezier(0.16, 1, 0.3, 1); }
+.toast-root[data-state="closed"] { animation: toastSwipeOut 100ms ease; }
+.toast-root[data-swipe="move"] { transform: translateX(var(--radix-toast-swipe-move-x)); }
+.toast-root[data-swipe="cancel"] { transform: translateX(0); transition: transform 200ms ease; }
