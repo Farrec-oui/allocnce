@@ -21,4 +21,7 @@ ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Les migrations doivent tourner au démarrage : main.py ne fait plus de
+# create_all() (Alembic est seul maître du schéma), donc sans cette étape un
+# conteneur neuf démarrerait sur un volume vide, sans aucune table.
+CMD ["sh", "-c", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000"]

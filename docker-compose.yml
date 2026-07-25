@@ -9,6 +9,11 @@ services:
       - alloc_data:/app/data
     environment:
       - PYTHONUNBUFFERED=1
+      # Clé de signature JWT. Obligatoire : sans elle, une clé aléatoire est
+      # régénérée à chaque redémarrage et toutes les sessions sont invalidées.
+      # Générer une fois avec :  python -c "import secrets;print(secrets.token_hex(32))"
+      # puis la placer dans un fichier .env à côté de ce docker-compose.yml.
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY manquant — voir README}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]

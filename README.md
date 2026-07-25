@@ -63,7 +63,22 @@ redémarrages d'uvicorn. Changer la clé invalide tous les tokens émis.
 
 ## Déploiement Docker (production)
 
-Le script `deploy.sh` fait tout en une commande :
+AllocNCE est une application **full-stack** : le frontend React est servi par le
+backend FastAPI, qui a besoin de Python pour parser les PDF, générer les DOCX et
+gérer l'authentification. Un hébergement de fichiers statiques (GitHub Pages,
+Netlify, S3 seul…) ne peut donc **pas** faire tourner l'application : les pages
+de connexion s'afficheraient sans qu'aucun appel API ne fonctionne.
+
+Créer d'abord un fichier `.env` à côté de `docker-compose.yml` :
+
+```bash
+echo "SECRET_KEY=$(python3 -c 'import secrets;print(secrets.token_hex(32))')" > .env
+```
+
+Sans lui, le conteneur refuse de démarrer — c'est volontaire : une clé
+regénérée à chaque redémarrage déconnecterait tous les utilisateurs.
+
+Puis :
 
 ```bash
 ./deploy.sh
@@ -74,7 +89,16 @@ Il effectue dans l'ordre :
 2. Copie le build dans `backend/static/` (servi par FastAPI via StaticFiles)
 3. `docker compose build && docker compose up -d`
 
+Au démarrage, le conteneur applique `alembic upgrade head` avant de lancer
+uvicorn : un volume neuf est donc migré automatiquement.
+
 L'application est alors disponible sur **http://localhost:8000**.
+
+Créer le premier administrateur, une fois le conteneur lancé :
+
+```bash
+docker compose exec backend python create_admin.py --email admin@allocnce.fr --name "Admin"
+```
 
 ### Volume persistant
 
