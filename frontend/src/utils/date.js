@@ -3,6 +3,17 @@ const MONTHS = {
   JUL:6, AUG:7, SEP:8, OCT:9, NOV:10, DEC:11,
 };
 
+const MONTH_NAMES = Object.keys(MONTHS);
+
+/** '2026-07-25' (input type=date) → '25JUL26' (format stocké en base). */
+export function isoToAllocDate(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  const month = MONTH_NAMES[parseInt(m, 10) - 1];
+  if (!month) return "";
+  return `${d}${month}${y.slice(2)}`;
+}
+
 export function parseAllocDate(dateStr) {
   if (!dateStr) return null;
   const day   = parseInt(dateStr.slice(0, 2), 10);

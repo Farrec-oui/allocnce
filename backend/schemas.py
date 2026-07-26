@@ -43,6 +43,68 @@ class Token(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Administration
+# ---------------------------------------------------------------------------
+
+class AdminUserOut(UserOut):
+    alloc_count: int = 0
+
+
+class AdminUserCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+    full_name: str = Field(min_length=1, max_length=120)
+    role: Literal["user", "admin"] = "user"
+
+
+class AdminUserUpdate(BaseModel):
+    full_name: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    role: Optional[Literal["user", "admin"]] = None
+    is_active: Optional[bool] = None
+    password: Optional[str] = Field(default=None, min_length=8, max_length=128)
+
+
+class TopUser(BaseModel):
+    full_name: str
+    email: EmailStr
+    alloc_count: int
+
+
+class AllocsByType(BaseModel):
+    creation: int = 0
+    prealloc: int = 0
+    alloc_finale: int = 0
+    maj: int = 0
+
+
+class AdminStats(BaseModel):
+    total_users: int
+    active_users: int
+    total_allocs: int
+    allocs_last_7_days: int
+    allocs_by_type: AllocsByType
+    top_users: list[TopUser]
+
+
+class AdminAllocationOut(BaseModel):
+    id: int
+    label: str
+    date: str
+    type: str
+    user_email: Optional[EmailStr] = None
+    user_name: Optional[str] = None
+    created_at: datetime
+    docx_path: Optional[str] = None
+
+
+class AdminAllocationPage(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    items: list[AdminAllocationOut]
+
+
+# ---------------------------------------------------------------------------
 # Allocations
 # ---------------------------------------------------------------------------
 

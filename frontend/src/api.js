@@ -88,13 +88,44 @@ export const api = {
     }),
 
   // --- Administration ---
-  listUsers: () => request("/auth/users"),
+  listUsers: () => request("/admin/users"),
+  createUser: (payload) =>
+    request("/admin/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
   updateUser: (id, payload) =>
-    request(`/auth/users/${id}`, {
+    request(`/admin/users/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     }),
+  deactivateUser: (id) => request(`/admin/users/${id}`, { method: "DELETE" }),
+  adminStats: () => request("/admin/stats"),
+
+  adminAllocations: ({ userId, date, limit = 50, offset = 0 } = {}) => {
+    const p = new URLSearchParams({ limit, offset });
+    if (userId) p.set("user_id", userId);
+    if (date) p.set("date", date);
+    return request(`/admin/allocations?${p}`);
+  },
+  adminDeleteAllocation: (id) =>
+    request(`/admin/allocations/${id}`, { method: "DELETE" }),
+
+  /** Aperçu d'une allocation appartenant à n'importe quel utilisateur. */
+  adminPreviewAllocation: async (id) => {
+    const res = await handle(
+      await fetch(`${BASE}/admin/allocations/${id}/preview`, { headers: authHeaders() })
+    );
+    return res.text();
+  },
+  adminDownloadAllocation: async (id, label) => {
+    const res = await handle(
+      await fetch(`${BASE}/admin/allocations/${id}/download`, { headers: authHeaders() })
+    );
+    saveBlob(await res.blob(), `${label}.docx`);
+  },
 
   // --- Allocations ---
   getAllocations: () => request("/allocations/"),

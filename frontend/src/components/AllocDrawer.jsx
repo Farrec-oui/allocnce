@@ -3,7 +3,10 @@ import { useCallback, useEffect, useState } from "react";
 import { Download, Loader2, RefreshCw, X } from "lucide-react";
 import { api } from "../api";
 
-export default function AllocDrawer({ alloc, onClose, onDownload }) {
+/** `admin` bascule sur les routes /admin/*, qui permettent de consulter
+ *  l'allocation de n'importe quel utilisateur. Les routes ordinaires restent
+ *  strictement cloisonnées au propriétaire. */
+export default function AllocDrawer({ alloc, onClose, onDownload, admin = false }) {
   const [html, setHtml] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -13,13 +16,15 @@ export default function AllocDrawer({ alloc, onClose, onDownload }) {
     setError(false);
     setHtml(null);
     try {
-      setHtml(await api.previewAllocation(alloc.id));
+      setHtml(admin
+        ? await api.adminPreviewAllocation(alloc.id)
+        : await api.previewAllocation(alloc.id));
     } catch {
       setError(true);
     } finally {
       setLoading(false);
     }
-  }, [alloc.id]);
+  }, [alloc.id, admin]);
 
   useEffect(() => {
     loadPreview();

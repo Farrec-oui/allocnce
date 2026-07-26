@@ -10,14 +10,12 @@ from database import get_db
 from models import User
 from schemas import (
     Token,
-    UserAdminUpdate,
     UserOut,
     UserRegister,
     UserSelfUpdate,
 )
 from services.auth import (
     create_access_token,
-    get_current_admin,
     get_current_user,
     get_password_hash,
     verify_password,
@@ -133,44 +131,6 @@ def update_me(
     return current_user
 
 
-# ---------------------------------------------------------------------------
-# Administration des comptes
-# ---------------------------------------------------------------------------
-
-@router.get("/users", response_model=list[UserOut])
-def list_users(
-    _admin: User = Depends(get_current_admin),
-    db: Session = Depends(get_db),
-):
-    return db.query(User).order_by(User.created_at.desc()).all()
-
-
-@router.patch("/users/{user_id}", response_model=UserOut)
-def admin_update_user(
-    user_id: int,
-    payload: UserAdminUpdate,
-    admin: User = Depends(get_current_admin),
-    db: Session = Depends(get_db),
-):
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(404, "Utilisateur introuvable")
-
-    # Un admin ne peut pas se retirer ses propres droits ni se désactiver :
-    # cela permettrait de supprimer le dernier accès admin de l'application.
-    if user.id == admin.id:
-        if payload.role is not None and payload.role != user.role:
-            raise HTTPException(400, "Vous ne pouvez pas modifier votre propre rôle")
-        if payload.is_active is False:
-            raise HTTPException(400, "Vous ne pouvez pas désactiver votre propre compte")
-
-    if payload.role is not None:
-        user.role = payload.role
-    if payload.is_active is not None:
-        user.is_active = payload.is_active
-
-    db.commit()
-    db.refresh(user)
-    logger.info("Compte modifié par admin=%s — id=%s role=%s actif=%s",
-                admin.id, user.id, user.role, user.is_active)
-    return user
+# La gestion des comptes par un administrateur vit désormais dans
+# routers/admin.py (/admin/users), avec le comptage d'allocations et la
+# création de comptes.
