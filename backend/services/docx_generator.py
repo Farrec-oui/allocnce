@@ -1,4 +1,6 @@
 import os
+from collections import defaultdict
+
 from docx import Document
 from docx.shared import Pt, Cm, RGBColor
 from docx.enum.text import WD_COLOR_INDEX, WD_ALIGN_PARAGRAPH
@@ -242,9 +244,31 @@ def _find_first_nce_dep(entry: dict) -> dict | None:
     return None
 
 
-def _find_last_nce_arr(entry: dict) -> dict | None:
-    nce = [f for f in entry["flights"] if f["arr"] == "NCE"]
-    return max(nce, key=lambda f: f["sta"]) if nce else None
+def _night_stop(flights: list[dict]) -> dict | None:
+    """Vol par lequel l'avion termine sa journée à NCE, s'il y reste.
+
+    Prendre la dernière arrivée à NCE ne suffit pas : un avion peut y arriver
+    puis repartir sans revenir — il ne passe alors pas la nuit sur place. Seul
+    compte le dernier mouvement de la journée : si c'est une arrivée à NCE,
+    l'avion y dort ; si c'est un départ, il est ailleurs.
+    """
+    if not flights:
+        return None
+    last = sorted(flights, key=lambda f: f["std"])[-1]
+    return last if last["arr"] == "NCE" else None
+
+
+def _night_stops_by_reg(flights: list[dict]) -> dict[str, dict]:
+    """{ac_reg: vol de night stop} pour une liste de vols brute (une journée)."""
+    by_reg: dict[str, list[dict]] = defaultdict(list)
+    for f in flights:
+        by_reg[f["ac_reg"]].append(f)
+    out: dict[str, dict] = {}
+    for ac_reg, ac_flights in by_reg.items():
+        ns = _night_stop(ac_flights)
+        if ns is not None:
+            out[ac_reg] = ns
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -262,14 +286,8 @@ def _add_table0(
 
     based = alloc_data.get("based", [])
 
-    # Build Night Stop index from previous day's flights
-    prev_ns: dict[str, dict] = {}
-    if previous_alloc_flights:
-        for f in previous_alloc_flights:
-            if f["arr"] == "NCE":
-                ac = f["ac_reg"]
-                if ac not in prev_ns or f["sta"] > prev_ns[ac]["sta"]:
-                    prev_ns[ac] = f
+    # Avions ayant réellement passé la nuit précédente à NCE
+    prev_ns = _night_stops_by_reg(previous_alloc_flights or [])
 
     n_rows = 1 + max(len(based), 1)
     table  = doc.add_table(rows=n_rows, cols=6)
@@ -289,7 +307,10 @@ def _add_table0(
     for i, entry in enumerate(based):
         ac_reg = entry["ac_reg"]
         ns_f   = prev_ns.get(ac_reg)
-        fw_f   = _find_first_nce_dep(entry)
+        # Sans night stop la veille, il n'y a pas de « first wave » : le premier
+        # départ de l'avion n'est alors pas la reprise du matin (un avion arrivé
+        # en cours de journée repartirait par exemple à 14h50).
+        fw_f   = _find_first_nce_dep(entry) if ns_f else None
 
         ns_text  = f"{ns_f['date']} {ns_f['flt_no']} {ns_f['dep']} {ns_f['arr']}" if ns_f else ""
         sta_text = _time(ns_f["sta"]) if ns_f else ""
@@ -353,13 +374,14 @@ def _add_table2(doc: Document, alloc_data: dict) -> None:
 
     for i, entry in enumerate(based):
         ac_reg = entry["ac_reg"]
-        ns_f   = _find_last_nce_arr(entry)
+        ns_f   = _night_stop(entry["flights"])
 
         ns_text  = f"{ns_f['date']} {ns_f['flt_no']} {ns_f['dep']} {ns_f['arr']}" if ns_f else ""
         sta_text = _time(ns_f["sta"]) if ns_f else ""
+        fw_text  = "TBA" if ns_f else ""
         reg_text = ac_reg.replace("-", "")
 
-        for j, val in enumerate([ns_text, sta_text, "TBA", "", reg_text]):
+        for j, val in enumerate([ns_text, sta_text, fw_text, "", reg_text]):
             _set_cell_text(table.cell(i + 1, j), val, centered=(j in centered))
 
 

@@ -446,3 +446,56 @@ def test_real_5_avions_bases(real_doc):
     texts = {p.text for p in real_doc.paragraphs}
     for reg in base_regs:
         assert any(reg in t for t in texts), f"{reg} introuvable"
+
+
+# ---------------------------------------------------------------------------
+# Night Stop — un avion qui repart ne dort pas sur place
+# ---------------------------------------------------------------------------
+
+class TestNightStopReel:
+    """Cas relevés sur l'allocation du 30JUL26 : le tableau donnait un night
+    stop à un avion reparti dans la journée, et une « first wave » d'après-midi
+    à un avion arrivé en cours de journée."""
+
+    @staticmethod
+    def _f(flt, dep, arr, std, sta, reg="OE-INI"):
+        return {"date": "30.07", "flt_no": flt, "dep": dep, "arr": arr,
+                "std": std, "sta": sta, "ac_reg": reg, "ac_type": "320",
+                "capacity": 186, "pax": 100, "crew_str": "2+4/0",
+                "captain": None, "crew_change_before": False}
+
+    def test_repart_apres_derniere_arrivee_nce(self):
+        from services.docx_generator import _night_stop
+        vols = [
+            self._f("EJU1611", "NCE", "LIL", "05:00", "06:40"),
+            self._f("EJU1612", "LIL", "NCE", "07:15", "09:00"),
+            self._f("EJU1693", "NCE", "PMO", "09:45", "11:15"),   # part et ne revient pas
+        ]
+        assert _night_stop(vols) is None
+
+    def test_termine_a_nce(self):
+        from services.docx_generator import _night_stop
+        vols = [
+            self._f("EJU1611", "NCE", "LIL", "05:00", "06:40"),
+            self._f("EJU1612", "LIL", "NCE", "07:15", "09:00"),
+        ]
+        ns = _night_stop(vols)
+        assert ns is not None and ns["flt_no"] == "EJU1612"
+
+    def test_sans_night_stop_pas_de_first_wave(self, tmp_path):
+        """Un avion arrivé en cours de journée n'a pas de first wave : sa
+        colonne doit rester vide plutôt que d'afficher un départ d'après-midi."""
+        from docx import Document
+        from services.docx_generator import generate_docx
+        entry = {"ac_reg": "OE-ICM", "new_based": True, "flights": [
+            self._f("EJU1694", "PMO", "NCE", "12:15", "13:50", "OE-ICM"),
+            self._f("EJU1697", "NCE", "VCE", "14:50", "16:00", "OE-ICM"),
+        ]}
+        alloc = {"date": "30 JUL", "based": [entry], "autres_rotations": [],
+                 "swap_refs": [], "ferry": []}
+        out = str(tmp_path / "a.docx")
+        generate_docx(alloc, [], out, previous_alloc_flights=[])  # pas de veille
+        row = [c.text for c in Document(out).tables[0].rows[1].cells]
+        assert row[0] == "" and row[1] == "", "night stop inexistant"
+        assert row[2] == "" and row[3] == "", "aucune first wave sans night stop"
+        assert row[5] == "OEICM"
